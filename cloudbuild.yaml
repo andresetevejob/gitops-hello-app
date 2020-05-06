@@ -43,16 +43,45 @@ steps:
   
   # [START cloudbuild-trigger-cd]
   # This step clones the hello-cloudbuild-env repository
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - kms
+    - decrypt
+    - --ciphertext-file=github_rsa.enc
+    - --plaintext-file=/root/.ssh/id_rsa
+    - --location=global
+    - --keyring=my-keyring
+    - --key=github-key  
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+    - '-c'
+    - |
+      chmod 600 /root/.ssh/id_rsa
+      cat <<EOF > /root/.ssh/config
+      Hostname github.com
+      IdentityFile /root/.ssh/id_rsa
+      EOF
+      mvn know_hosts /root/.ssh/id_rsa
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh        
   - name: 'gcr.io/cloud-builders/git'
     id: Clone env repository
     entrypoint: /bin/sh
     args:
     - '-c'
     - |
-      git  clone https://github.com/andresetevejob/gitops-hello-env && \
+      git  clone https://github.com/andresetevejob/gitops-hello-env.git && \
       cd gitops-hello-env && \
       git checkout candidate && \
       git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)')
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh   
   
   # This step generates the new manifest
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -63,6 +92,9 @@ steps:
     - |
        sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
        sed "s/COMMIT_SHA/${SHORT_SHA}/g" > gitops-hello-env/kubernetes.yaml
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh    
   
   # This step pushes the manifest back to hello-cloudbuild-env
   - name: 'gcr.io/cloud-builders/gcloud'
