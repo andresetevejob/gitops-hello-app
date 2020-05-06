@@ -78,13 +78,12 @@ steps:
     - '-c'
     - |
       git  clone https://github.com/andresetevejob/gitops-hello-env.git && \
+      sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
+      sed "s/COMMIT_SHA/${SHORT_SHA}/g" > gitops-hello-env/kubernetes.yaml 
       cd gitops-hello-env && \
       git checkout candidate && \
       git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)')
-      sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
-      sed "s/COMMIT_SHA/${SHORT_SHA}/g" > gitops-hello-env/kubernetes.yaml 
       set -x && \
-      cd gitops-hello-env && \
       git add kubernetes.yaml && \
       git commit -m "Deploying image gcr.io/${PROJECT_ID}/hello-cloudbuild:${SHORT_SHA}
       Built from commit ${COMMIT_SHA} of repository hello-cloudbuild-app
