@@ -69,20 +69,6 @@ steps:
     volumes:
       - name: 'ssh'
         path: /root/.ssh        
-  - name: 'gcr.io/cloud-builders/git'
-    id: Clone env repository
-    entrypoint: /bin/sh
-    args:
-    - '-c'
-    - |
-      git  clone https://github.com/andresetevejob/gitops-hello-env.git && \
-      cd gitops-hello-env && \
-      git checkout candidate && \
-      git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)')
-    volumes:
-      - name: 'ssh'
-        path: /root/.ssh   
-  
   # This step generates the new manifest
   # This step pushes the manifest back to hello-cloudbuild-env
   - name: 'gcr.io/cloud-builders/git'
@@ -91,6 +77,10 @@ steps:
     args:
     - '-c'
     - |
+      git  clone https://github.com/andresetevejob/gitops-hello-env.git && \
+      cd gitops-hello-env && \
+      git checkout candidate && \
+      git config user.email $(gcloud auth list --filter=status:ACTIVE --format='value(account)')
       sed "s/GOOGLE_CLOUD_PROJECT/${PROJECT_ID}/g" kubernetes.yaml.tpl | \
       sed "s/COMMIT_SHA/${SHORT_SHA}/g" > gitops-hello-env/kubernetes.yaml 
       set -x && \
